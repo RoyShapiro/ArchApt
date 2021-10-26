@@ -1,0 +1,180 @@
+#!/bin/bash
+AAPTUSAGE=$(cat <<-END
+ArchApt apt-pacman adapter 0.2.1 (bash)
+Usage: apt [options] command
+
+ArchApt is a commandline syntax adapter for pacman package manager
+that provides a familiar apt syntax for commands used in pacman systems for
+searching and managing as well as querying information about packages.
+It provides a very basic subset of functionality provided by the APT tools
+used in Debian-based systems, but makes it easier for users more familiar
+with apt syntax to use Arch-based systems that use pacman.
+
+Most used commands:
+  list - list packages based on package names
+  search - search in package descriptions
+  show - show package details
+  install - install packages
+  reinstall - reinstall packages
+  remove - remove packages
+  autoremove - Remove automatically all unused packages
+  update - update list of available packages
+  upgrade - upgrade the system by installing/upgrading packages
+  full-upgrade - upgrade the system by removing/installing/upgrading packages
+  edit-sources - edit the source information file
+  satisfy - satisfy dependency strings
+
+See "man pacman" or "man yay" if this tool misses any commands necessary for your
+use case. Information about how to configure sources can be found in /etc/pacman.conf.
+This tool will make use of yay automatically, provided it is installed.
+It even accounts for the habit of always typing sudo in front of apt,
+which is discouraged by yay due to it's use of makepkg.
+                                        ArchApt, alas, has no Super Cow Powers.
+END
+);
+AAPTPACMANVERB="";
+AAPTPACMANEXEC="pacman";
+AAPTPAC=$(which pacman);
+AAPTYAY=$(which yay);
+AAPTNOYAYSWITCH="";
+if [[ -z $1 ]]; then
+	echo "$AAPTUSAGE";
+	exit 0;
+fi
+if [[ -z $AAPTPAC ]]; then
+	echo "Pacman seems not to be installed, are you sure you're running on Arch (Manjaro)?";
+	exit 1;
+fi
+if [[ -z $AAPTYAY ]]; then
+	echo "Yay seems not to be installed, please, consider.";
+else
+	AAPTPACMANEXEC="yay";
+fi
+if [[ $1 == "search" ]]; then
+	AAPTPACMANVERB="-Ss";
+elif [[ $1 == "update" ]]; then
+	AAPTPACMANVERB="-Sy";
+elif [[ $1 == "upgrade" ]]; then
+	AAPTPACMANVERB="-Su";
+elif [[ $1 == "dist-upgrade" ]]; then
+	AAPTPACMANVERB="-Syu";
+elif [[ $1 == "full-upgrade" ]]; then
+	AAPTPACMANVERB="-Syu";
+elif [[ $1 == "install" ]]; then
+	AAPTPACMANVERB="-S";
+elif [[ $1 == "remove" ]]; then
+	AAPTPACMANVERB="-R";
+elif [[ $1 == "autoremove" ]]; then
+	AAPTPACMANEXEC="pacman"; #Switch to pacman
+	AAPTPACMANVERB="-Qdtq | pacman -Rs -"; #Issue full pipe command.
+	AAPTNOYAYSWITCH="Yes"; #Prevent from switching back to yay later.
+elif [[ $1 == "autoclean" ]]; then
+	AAPTPACMANVERB="-Sc";
+elif [[ $1 == "clean" ]]; then
+	AAPTPACMANVERB="-Scc";
+elif [[ $1 == "download" ]]; then
+	AAPTPACMANVERB="-Sw";
+elif [[ $1 == "satisfy" ]]; then
+	if [[ ! -z $2 ]]; then
+		echo "Satisfy itself is not supported, typical update & installation should prompt for dependencies. Attempting now.";
+		AAPTPACMANVERB="-Syu";
+	else
+		echo "Satisfy alone is not supported, please, provide a package name or update the system and install the package manually.";
+		exit 1;
+	fi
+elif [[ $1 == "reinstall" ]]; then
+	AAPTPACMANVERB="-S"; #Probably should run "pacman -Scc" first.
+elif [[ $1 == "show" ]]; then
+	AAPTPACMANVERB="-Si"; #Probably should run "pacman -Qi" also.
+elif [[ $1 == "edit-sources" ]]; then
+	if [[ ! -z $(which nano) ]]; then #Try nano if installed, some people will cringe at this.
+		nano /etc/pacman.conf
+	else
+		vim /etc/pacman.conf
+	fi
+	exit 0; #Nothing to do here.
+elif [[ $1 == "list" ]]; then #see below for installed and upgradeable.
+	AAPTPACMANVERB="-Q";
+elif [[ $1 == "dpkgi" ]]; then #install local package.
+	AAPTPACMANVERB="-U";
+elif [[ $1 == "dpkg-i" ]]; then #install local package.
+	AAPTPACMANVERB="-U";
+elif [[ $1 == "moo" ]]; then #that sadly is true.
+	echo "Sadly, the are no cows here.";
+	exit 1;
+else
+	echo "Unknown command or verb: \"$1\". Please, review: https://wiki.archlinux.org/title/Pacman/Rosetta";
+	exit 1;
+fi
+AAPTARGS=(); #Separate the rest of parameters.
+AAPTPAKS=();
+for i in "${@:2}" #Loop through arguments starting from 2 (thus ignoring the verb).
+do
+	if [[ ${i:0:1} == "-" ]]; then
+		AAPTARGS+=($i); #Argument
+	elif [[ ${i:0:2} == "--" ]]; then
+		AAPTARGS+=($i); #Argument
+	else
+		AAPTPAKS+=($i); #Package name
+	fi
+done
+if [[ " ${AAPTARGS[*]} " =~ "--upgradeable" ]]; then
+	if [[ $AAPTPACMANVERB == "-Q" ]]; then
+		AAPTPACMANVERB="-Qu"; #List only upgradeable
+	fi
+fi
+if [[ ! " ${AAPTARGS[*]} " =~ "--installed" ]]; then #if not
+	if [[ $AAPTPACMANVERB == "-Q" ]]; then
+		if [[ $AAPTPACMANEXEC == "pacman" ]]; then
+			echo "Pacman doesn't support listing all repo packages, listing only installed.";
+		else
+			echo "Yay doesn't support listing all repo packages, listing only installed.";
+		fi
+	fi
+fi
+if [[ " ${AAPTARGS[*]} " =~ "--fpacman" ]]; then #Force pacman executable if yay is installed.
+	AAPTPACMANEXEC="pacman";
+fi
+if [[ " ${AAPTARGS[*]} " =~ "--fyay" ]]; then #Force yay even if not found.
+	if [[ -z $AAPTNOYAYSWITCH ]]; then
+		AAPTPACMANEXEC="yay";
+	else
+		echo "The requested operation can not be performed with yay. Switching to pacman.";
+	fi
+fi
+if [[ " ${AAPTARGS[*]} " =~ "--purge" ]]; then
+	if [[ $AAPTPACMANVERB == "-R" ]]; then
+		AAPTPACMANVERB="-Rsn"; #Remove package, it's dependencies, and it's config saves.
+		#Also, see this discussion: https://bbs.archlinux.org/viewtopic.php?id=84235
+	fi
+fi
+if [[ " ${AAPTARGS[*]} " =~ "--yes" ]] || [[ " ${AAPTARGS[*]} " =~ "-y" ]]; then #Allow noconfirm runs.
+	AAPTPACMANVERB="$AAPTPACMANVERB --noconfirm";
+fi
+AAPTRESULT="$AAPTPACMANEXEC $AAPTPACMANVERB ${AAPTPAKS[*]}"; #Now we have the command we need to run.
+if [[ " ${AAPTARGS[*]} " =~ "--dry-run" ]]; then #If we're just curious, display it and this is it.
+	echo "Command: $AAPTRESULT";
+	exit 0;
+fi
+if [[ $AAPTPACMANEXEC == "yay" ]]; then
+	AAPTRUNASUSER=$(which runuser);
+	if [[ $EUID == 0 ]]; then #Apt users have a (reasonable) habit of running such commands as root, but yay doesn't like it due to makepkg security concerns. We need to adjust for that.
+		AAPTUSER=$(logname); #Figure out who we really are.
+		if [[ -z $AAPTRUNASUSER ]]; then
+			echo "Apt emulator requires runuser utility from util-linux package to function with yay in sudo mode. If you want to install it, please confirm installation."; #Prompt user that util-linux needs to be installed for sudo yay action.
+			pacman -S util-linux #doesn't require sudo, as we are root already, and that's precisely the problem. See check above.
+		fi
+		if [[ -z $AAPTUSER ]] || [[ $AAPTUSER == "root" ]] || [[ -z $AAPTRUNASUSER ]]; then
+			echo "Running in yay mode as root is discouraged. Please, consider --fpacman command line switch to use pure pacman.";
+			echo "Trying the same using pacman backend.";
+			AAPTPACMANEXEC="pacman"; #Switch back to pacman.
+			AAPTRESULT="$AAPTPACMANEXEC $AAPTPACMANVERB ${AAPTPAKS[*]}"; #Recompile the command.
+		else
+			echo "Running in yay mode as root is discouraged. Changing to current user ($AAPTUSER).";
+			AAPTRESULT="$AAPTRUNASUSER -u $AAPTUSER -- $AAPTRESULT"; #Switch to the current user and run the command.
+		fi
+	fi
+fi
+$AAPTRESULT #Run the command
+#echo $AAPTRESULT; #debug
+#exit 1; #debug
