@@ -24,6 +24,11 @@ Most used commands:
   edit-sources - edit the source information file
   satisfy - satisfy dependency strings
 
+Additionally:
+  yay - installs yay using the official one-liner from here:
+        https://github.com/Jguer/yay#source
+  nochecks - installs an AUR packages skipping integrity checks
+
 See "man pacman" or "man yay" if this tool misses any commands necessary for your
 use case. Information about how to configure sources can be found in /etc/pacman.conf.
 This tool will make use of yay automatically, provided it is installed.
@@ -99,6 +104,20 @@ elif [[ $1 == "dpkgi" ]]; then #install local package.
 	AAPTPACMANVERB="-U";
 elif [[ $1 == "dpkg-i" ]]; then #install local package.
 	AAPTPACMANVERB="-U";
+elif [[ $1 == "yay" ]]; then
+	echo "Trying to install yay..."
+	cd /tmp #Switch to building in /tmp to make sure we're not clogging the actual memory.
+	#The following is the official one-liner from here: https://github.com/Jguer/yay#source
+	pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+	exit 0;
+elif [[ $1 == "skipinteg" ]] || [[ $1 == "nointegrity" ]] || [[ $1 == "nochecks" ]]; then
+	if [[ -z $AAPTYAY ]]; then
+		echo "Yay is not installed. This command makes no sense with pacman."
+		exit 1;
+	else
+		AAPTPACMANEXEC="yay"; #Switch to yay
+		AAPTPACMANVERB="-S --skipinteg"; #Skip integrity checks
+	fi
 elif [[ $1 == "moo" ]]; then #that sadly is true.
 	echo "Sadly, the are no cows here.";
 	exit 1;

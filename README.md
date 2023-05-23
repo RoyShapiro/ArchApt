@@ -18,6 +18,8 @@ Commands currently supported:
 * `update` - update list of available packages
 * `upgrade` - upgrade the system by installing/upgrading packages
 * `full-upgrade` - upgrade the system by removing/installing/upgrading packages
+* `yay` - install yay using an official one-liner from here: https://github.com/Jguer/yay#source
+* `nochecks` - install an AUR package skipping integrity checks 
 
 Switches currently supported:
 * `--installed` - used with `list` to show a list of currently installed packages
