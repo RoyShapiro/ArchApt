@@ -1,6 +1,6 @@
 #!/bin/bash
 AAPTUSAGE=$(cat <<-END
-ArchApt apt-pacman adapter 0.2.1 (bash)
+ArchApt apt-pacman adapter 0.2.3 (bash)
 Usage: apt [options] command
 
 ArchApt is a commandline syntax adapter for pacman package manager
@@ -25,8 +25,7 @@ Most used commands:
   satisfy - satisfy dependency strings
 
 Additionally:
-  yay - installs yay using the official one-liner from here:
-        https://github.com/Jguer/yay#source
+  yay - installs yay (needs to be run as both root and then normal user)
   nochecks - installs an AUR packages skipping integrity checks
 
 See "man pacman" or "man yay" if this tool misses any commands necessary for your
@@ -105,11 +104,68 @@ elif [[ $1 == "dpkgi" ]]; then #install local package.
 elif [[ $1 == "dpkg-i" ]]; then #install local package.
 	AAPTPACMANVERB="-U";
 elif [[ $1 == "yay" ]]; then
-	echo "Trying to install yay..."
-	cd /tmp #Switch to building in /tmp to make sure we're not clogging the actual memory.
-	#The following is the official one-liner from here: https://github.com/Jguer/yay#source
-	pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
-	exit 0;
+	AAPTYAYDEPSDEV=$(pacman -Q base-devel 2>/dev/null)
+	AAPTYAYDEPSGIT=$(pacman -Q git 2>/dev/null)
+
+	if [[ $EUID == 0 ]]; then
+		if [[ -z $AAPTYAYDEPSDEV ]] || [[ -z $AAPTYAYDEPSGIT ]]; then
+			echo "Trying to install yay dependencies..."
+			pacman -S --needed git base-devel
+			if [ $? -eq 0 ]; then
+				echo "Dependencies installed successfully. Please, continue (issue 'apt yay') as normal user."
+				exit 0;
+			else
+				echo "Something went wrong, please try again."
+				exit 1;
+			fi
+		else
+			echo "Dependencies already installed, try continuing as normal user."
+			exit 1;
+		fi
+	else
+		if [[ ! -z $AAPTYAYDEPSDEV ]] || [[ ! -z $AAPTYAYDEPSGIT ]]; then
+			echo "Trying to install yay..."
+			cd /tmp #Switch to building in /tmp to make sure we're not clogging the actual memory.
+			if [ $? -ne 0 ]; then
+				echo "Changing folder to /tmp failed. Something is wrong with your system."
+				exit 1;
+			fi
+			#The following is the official install procedure from here: https://github.com/Jguer/yay#source
+			git clone https://aur.archlinux.org/yay.git
+			if [ $? -ne 0 ]; then
+				echo "Cloning failed. See what can be the issue and try again."
+				exit 1;
+			fi
+			cd yay 
+			if [ $? -ne 0 ]; then
+				echo "Changing to yay folder failed. See what can be the issue and try again."
+				exit 1;
+			fi
+			makepkg -si
+			if [ $? -ne 0 ]; then
+				echo "Makepkg failed. See what can be the issue and try again."
+				echo "Cleaning up..."
+				rm -rf /tmp/yay
+				if [ $? -ne 0 ]; then
+					echo "Clean-up failed. Can't delete /tmp/yay."
+				fi
+				exit 1;
+			else
+				echo "Yay successfully installed."
+				echo "Cleaning up..."
+				rm -rf /tmp/yay
+				if [ $? -ne 0 ]; then
+					echo "Clean-up failed. Can't delete /tmp/yay."
+				fi
+				exit 0;
+			fi
+			exit 0;
+		else
+			echo "Yay dependencies (base-devel, git) not found."
+			echo "Please, run as root to install the necessary dependencies first."
+			exit 1;
+		fi
+	fi
 elif [[ $1 == "skipinteg" ]] || [[ $1 == "nointegrity" ]] || [[ $1 == "nochecks" ]]; then
 	if [[ -z $AAPTYAY ]]; then
 		echo "Yay is not installed. This command makes no sense with pacman."
