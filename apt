@@ -39,8 +39,8 @@ END
 );
 AAPTPACMANVERB="";
 AAPTPACMANEXEC="pacman";
-AAPTPAC=$(which pacman);
-AAPTYAY=$(which yay);
+AAPTPAC=$(which pacman 2>/dev/null);
+AAPTYAY=$(which yay 2>/dev/null);
 AAPTNOYAYSWITCH="";
 if [[ -z $1 ]]; then
 	echo "$AAPTUSAGE";
@@ -92,7 +92,7 @@ elif [[ $1 == "reinstall" ]]; then
 elif [[ $1 == "show" ]]; then
 	AAPTPACMANVERB="-Si"; #Probably should run "pacman -Qi" also.
 elif [[ $1 == "edit-sources" ]]; then
-	if [[ ! -z $(which nano) ]]; then #Try nano if installed, some people will cringe at this.
+	if [[ ! -z $(which nano 2>/dev/null) ]]; then #Try nano if installed, some people will cringe at this.
 		nano /etc/pacman.conf
 	else
 		vim /etc/pacman.conf
@@ -176,7 +176,7 @@ if [[ " ${AAPTARGS[*]} " =~ "--dry-run" ]]; then #If we're just curious, display
 	exit 0;
 fi
 if [[ $AAPTPACMANEXEC == "yay" ]]; then
-	AAPTRUNASUSER=$(which runuser);
+	AAPTRUNASUSER=$(which runuser 2>/dev/null);
 	if [[ $EUID == 0 ]]; then #Apt users have a (reasonable) habit of running such commands as root, but yay doesn't like it due to makepkg security concerns. We need to adjust for that.
 		AAPTUSER=$(logname); #Figure out who we really are.
 		if [[ -z $AAPTRUNASUSER ]]; then
