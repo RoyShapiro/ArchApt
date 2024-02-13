@@ -1,6 +1,6 @@
 #!/bin/bash
 AAPTUSAGE=$(cat <<-END
-ArchApt apt-pacman adapter 0.2.3 (bash)
+ArchApt apt-pacman adapter 0.2.41 (bash)
 Usage: apt [options] command
 
 ArchApt is a commandline syntax adapter for pacman package manager
@@ -21,6 +21,7 @@ Most used commands:
   update - update list of available packages
   upgrade - upgrade the system by installing/upgrading packages
   full-upgrade - upgrade the system by removing/installing/upgrading packages
+  fix-upgrade - try to force a stuck system upgrade (keyring issues, old files)
   edit-sources - edit the source information file
   satisfy - satisfy dependency strings
 
@@ -64,6 +65,20 @@ elif [[ $1 == "dist-upgrade" ]]; then
 	AAPTPACMANVERB="-Syu";
 elif [[ $1 == "full-upgrade" ]]; then
 	AAPTPACMANVERB="-Syu";
+elif [[ $1 == "fix-upgrade" ]]; then
+	if [[ $EUID == 0 ]]; then
+		echo "Running forced upgrade...";
+		TMPDIR="$(mktemp -d)";
+		cp "/etc/pacman.conf" "${TMPDIR}/pacman.conf"
+		sed --in-place --regexp-extended 's/^(SigLevel).+$/\1 = Never/g' "${TMPDIR}/pacman.conf"
+		pacman -Syu --overwrite \* --config "${TMPDIR}/pacman.conf"
+		find "${TMPDIR}" -type f -exec rm --recursive --force "{}" \; #Remove temp folder and config
+		rmdir "${TMPDIR}"
+		exit 0; #Exit
+	else
+		echo "Forced upgrade needs to be done in root mode."
+		exit 1; #Exit
+	fi
 elif [[ $1 == "install" ]]; then
 	AAPTPACMANVERB="-S";
 elif [[ $1 == "remove" ]]; then

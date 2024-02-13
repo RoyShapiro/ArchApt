@@ -18,6 +18,7 @@ Commands currently supported:
 * `update` - update list of available packages
 * `upgrade` - upgrade the system by installing/upgrading packages
 * `full-upgrade` - upgrade the system by removing/installing/upgrading packages
+* `fix-upgrade` - try to force system upgrade when it is stuck due to keyring issues and\or old files (not recommended)
 * `yay` - install yay (needs to be run as root first and then as normal user)
 * `nochecks` - install an AUR package skipping integrity checks 
 
@@ -35,11 +36,11 @@ of running apt as sudo, which is discouraged by yay due to makepkg security conc
 but running it as a normal user regardless (provided `runuser` is available).
 
 # Disclaimer
-This script was made and is being maintained **for my personal usage only**, it's raw, it doesn't follow best practice guidelines, it doesn't suit someone's ideals of code beauty, and it might very well be **unsafe** to use.  
-If it breaks your system, damages your data, leaves your poor cat hungry, e.t.c, you're on your own.   
-**If you do make use of it, you're doing this ON YOUR OWN RISK only**. See LICENSE for all the details.   
-And, yes, whenever you do find the time for that, you definitely should learn to use pacman. It's great.   
-That said, it this script was still of use to you, it makes me happy.
+This script was made and is being maintained **for my personal usage only**, it's raw, it doesn't follow best practice guidelines, it doesn't suit someone's ideals of code beauty, and it might very well be **unsafe** to use. 
+If it breaks your system, damages your data, leaves your poor cat hungry, e.t.c, you're on your own. 
+**If you do make use of it, you're doing this AT YOUR OWN RISK only**. See LICENSE for all the details. 
+And, yes, whenever you do find the time for that, you definitely should learn to use pacman. It's great. 
+That said, if this script was still of use to you, it makes me happy.
 
 # Installation
 ## Prerequisites
